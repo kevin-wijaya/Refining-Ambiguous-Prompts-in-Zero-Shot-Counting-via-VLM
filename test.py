@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
 import os 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from torchvision.utils import save_image
 from config import cfg 
 import util.misc as utils
@@ -79,7 +79,7 @@ def prepare_data(img_path, anno):
 
 def get_vae_embedding(attr_np):
     feats_vae = FeatsVAE(1024, 512).cuda()
-    feats_vae.load_state_dict(torch.load('feats_vae.pth'))
+    feats_vae.load_state_dict(torch.load('feats_vae.pth', map_location=torch.device('cpu')))
     z_dist = normal.Normal(0, 1)
     ind_count = 500
     attr = torch.from_numpy(attr_np.astype(np.float32)).cuda()
@@ -106,7 +106,7 @@ def extract_corr_map(args):
     regressor = get_regressor(cfg)
     regressor.to(device)
     regressor.eval()
-    regressor.load_state_dict(torch.load('regressor_model/regressor.pth'))    
+    regressor.load_state_dict(torch.load('regressor_model/regressor.pth', map_location=torch.device('cpu')))    
  
 
     # define dataset
@@ -115,7 +115,7 @@ def extract_corr_map(args):
     cls_list = np.array(list(cls_dict.values()))
     cls_list = sorted(np.unique(cls_list))
     vae_feats = np.load(os.path.join(output_dir, 'fsc_vae_feats_best.npy'), allow_pickle=True)
-    checkpoint = torch.load(cfg.VAL.resume, map_location='cpu')
+    checkpoint = torch.load(cfg.VAL.resume, map_location=torch.device('cpu'))
     model_imgnet = copy.deepcopy(model)
     model.load_state_dict(checkpoint['model'])
     mae = 0

@@ -15,7 +15,7 @@ DATASET:
 DIR:
   dataset: ./FSC147_384_V2
   exp: bmnet+_ep3_epoch300_no_refiner
-  output_dir: ./checkpoints\bmnet+_ep3_epoch300_no_refiner
+  output_dir: ./checkpoints/bmnet+_ep3_epoch300_no_refiner
   result: ./results
   snapshot: ./checkpoints
 MODEL:
@@ -36,13 +36,13 @@ MODEL:
   pretrain: True
   refiner: none
   refiner_layers: 1
-  refiner_proj_dim: 32
+  refiner_proj_dim: 256
   repeat_times: 1
-  use_bias: True
+  use_bias: False
 TRAIN:
   batch_size: 8
   clip_max_norm: 0.1
-  contrast_loss: info_nce
+  contrast_loss: none
   contrast_weight: 5e-06
   counting_loss: l2loss
   device: cuda:0
@@ -57,14 +57,14 @@ TRAIN:
   momentum: 0.95
   num_workers: 1
   optimizer: AdamW
-  resume: ./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_ckpt.pth
-  seed: 903
+  resume: ./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_ckpt.pth
+  seed: 42
   start_epoch: 0
   weight_decay: 0.0005
 VAL:
   batch_size: 1
   disp_iter: 10
   evaluate_only: False
-  resume: ./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_best.pth
+  resume: ./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_best.pth
   val_epoch: 10
   visualization: False

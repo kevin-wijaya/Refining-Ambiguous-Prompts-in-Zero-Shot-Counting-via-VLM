@@ -5,3 +5,4 @@ https://drive.google.com/drive/folders/1FjkaK2EzcOdiH_N9WkGnh5c3G9xj9PmE?usp=dri
 
 command for run:
 python test.py --cfg checkpoints/bmnet+_ep3_epoch300_no_refiner/config.yaml
+python train.py --cfg config/train.yaml

@@ -126,7 +126,7 @@ class FSC147Dataset(Dataset):
         self.image_classes = get_image_classes(image_classes_file)
         with open(annotation_file) as f:
             self.annotations = json.load(f)
-        self.rpn_anno = np.load(f'{self.data_dir}box_rpn_all.npy', allow_pickle=True).item() 
+        self.rpn_anno = np.load(f'{self.data_dir}/box_rpn_all.npy', allow_pickle=True).item() 
         self.sel_anno = np.load(f'{self.data_dir}/box_rpn_sel_all.npy', allow_pickle=True).item()
         # store images and generate ground truths
         self.images = {}
