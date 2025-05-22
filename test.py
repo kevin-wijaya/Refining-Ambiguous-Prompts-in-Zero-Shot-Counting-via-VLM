@@ -30,7 +30,7 @@ import torch.nn.functional as F
 from PIL import Image
 import matplotlib.pyplot as plt
 from models.vae import FeatsVAE
-import pickle5 as pickle
+import pickle
 
 def select_feats_vae_imgnet(vae_feature, patches, model):
     patch_feature = model.backbone(patches)

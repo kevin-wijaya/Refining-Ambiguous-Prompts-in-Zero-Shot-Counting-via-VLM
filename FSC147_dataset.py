@@ -1,3 +1,10 @@
+# -----------------------------------------------------------------------------
+# Edited by: Kevin Wijaya
+# Date: 2025-05-22
+# Change Log:
+# - 2025-05-22: change the path of dataset
+# -----------------------------------------------------------------------------
+
 """
 FSC-147 dataset
 The exemplar boxes are sampled and resized to the same size
@@ -119,8 +126,8 @@ class FSC147Dataset(Dataset):
         self.image_classes = get_image_classes(image_classes_file)
         with open(annotation_file) as f:
             self.annotations = json.load(f)
-        self.rpn_anno = np.load('box_rpn_all.npy', allow_pickle=True).item() 
-        self.sel_anno = np.load('box_rpn_sel_all.npy', allow_pickle=True).item()
+        self.rpn_anno = np.load(f'{self.data_dir}box_rpn_all.npy', allow_pickle=True).item() 
+        self.sel_anno = np.load(f'{self.data_dir}/box_rpn_sel_all.npy', allow_pickle=True).item()
         # store images and generate ground truths
         self.images = {}
         self.targets = {}
@@ -310,8 +317,8 @@ if __name__ == '__main__':
     main_transform = MainTransform()
     query_transform = get_query_transforms(is_train=True, exemplar_size=(128, 128))
     
-    dataset = FSC147Dataset(data_dir='D:/dataset/FSC147/',
-                            data_list='D:/dataset/FSC147/train.txt',
+    dataset = FSC147Dataset(data_dir='./FSC147_384_V2/',
+                            data_list='./FSC147_384_V2/train.txt',
                             scaling=1.0,
                             main_transform=main_transform,
                             query_transform=query_transform)
@@ -319,7 +326,7 @@ if __name__ == '__main__':
     data_loader = DataLoader(dataset, batch_size=5, collate_fn=batch_collate_fn)
     
     for idx, sample in enumerate(data_loader):
-        img, patches, targets = sample
+        img, patches, targets, file_name = sample
         print(img.shape)
         print(patches.keys())
         print(targets.keys())
