@@ -1,3 +1,10 @@
+# -----------------------------------------------------------------------------
+# Edited by: Kevin Wijaya
+# Date: 2025-05-22
+# Change Log:
+# - 2025-05-22: add DIR.output_dir
+# -----------------------------------------------------------------------------
+
 from yacs.config import CfgNode as CN
 
 # -----------------------------------------------------------------------------
@@ -14,6 +21,7 @@ _C.DIR.dataset = "FSC147"
 _C.DIR.exp = "dataset_model_inputblocksize_outputstride_resizeratio_cropsize_batchsize_epoch"
 _C.DIR.snapshot = "./snapshots"
 _C.DIR.result = "./results"
+_C.DIR.output_dir = './checkpoints/bmnet+_ep3_epoch300_no_refiner'
 
 # -----------------------------------------------------------------------------
 # Dataset

@@ -15,7 +15,7 @@ DATASET:
 DIR:
   dataset: ./FSC147_384_V2
   exp: bmnet+_ep3_epoch300_no_refiner
-  output_dir: ./checkpoints/bmnet+_ep3_epoch300_no_refiner
+  output_dir: ./checkpoints\bmnet+_ep3_epoch300_no_refiner
   result: ./results
   snapshot: ./checkpoints
 MODEL:
@@ -57,7 +57,7 @@ TRAIN:
   momentum: 0.95
   num_workers: 1
   optimizer: AdamW
-  resume: ./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_ckpt.pth
+  resume: ./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_ckpt.pth
   seed: 903
   start_epoch: 0
   weight_decay: 0.0005
@@ -65,6 +65,6 @@ VAL:
   batch_size: 1
   disp_iter: 10
   evaluate_only: False
-  resume: ./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_best.pth
+  resume: ./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints\bmnet+_ep3_epoch300_no_refiner\./checkpoints/bmnet+_ep3_epoch300_no_refiner/model_best.pth
   val_epoch: 10
   visualization: False
