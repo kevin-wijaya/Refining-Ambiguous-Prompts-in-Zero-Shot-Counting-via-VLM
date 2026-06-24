@@ -6,8 +6,8 @@ This project presents an additional process designed to improve object counting 
 
 ## 🎯 Baseline Framework (Zero Shot Object Counting)
 
-<img src="./assets/baseline-framework.webp" style="width: 99.6%; min-width: 300px; max-width: 800px;"> <br>
-<img src="./assets/challenges.webp" style="width: 99.6%; min-width: 300px; max-width: 800px;"> <br>
+<img src="./assets/baseline-framework.webp" style="width: 99.6%; min-width: 300px; max-width: 700px;"> <br>
+<img src="./assets/challenges.webp" style="width: 99.6%; min-width: 300px; max-width: 700px;"> <br>
 
 The architecture focuses on *bridging the gap between raw images and precise counting targets*. The system relies on a diffusion based process to generate visual prototypes, which serve as the foundation for counting objects in a zero shot setting.
 
@@ -16,13 +16,13 @@ A major problem in current systems is the problem of **label ambiguity**. Models
 
 ## 🧠 Proposed Methodology
 
-<img src="./assets/contribution.webp" style="width: 99.6%; min-width: 300px; max-width: 800px;"> <br>
+<img src="./assets/contribution.webp" style="width: 99.6%; min-width: 300px; max-width: 700px;"> <br>
 
 To improve the generation of visual prototypes and ensure they accurately match the target environment, the framework incorporates an **automated prompt refinement pipeline**. The process uses **BLIP** to generate *descriptive captions from the input image*, which are then processed by the **Phi 3 model** to construct *more precise and contextual prompts*. By leveraging these refined prompts for the diffusion process, the system ensures that the `generated visual prototypes are correctly aligned with the target objects`. For ambiguity mitigation, the refinement step transforms vague labels into detailed descriptions, allowing the diffusion model to better distinguish between concepts and reduce classification errors.
 
 ## 🔧 Installation
 
-*Comming soon ~*
+Comming soon
 
 ## 🧾 Acknowledgement
 
@@ -34,5 +34,5 @@ This project is built on top of the official `zero-shot-counting` and `Learning 
 
 **Kevin Wijaya**\*¹
 
-¹² Department of Electrical Engineering and Computer Science<br>
+¹ Department of Electrical Engineering and Computer Science<br>
 National Yang Ming Chiao Tung University (NYCU)  
