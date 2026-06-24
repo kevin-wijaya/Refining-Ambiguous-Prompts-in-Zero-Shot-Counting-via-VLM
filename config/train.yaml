@@ -35,7 +35,7 @@ TRAIN:
   contrast_loss: "none"
   contrast_weight: 5e-6
   optimizer: "AdamW"
-  device: "cuda:0"
+  device: "cuda"
   batch_size: 8
   epochs: 300
   lr_backbone: 1e-5

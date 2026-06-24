@@ -1,6 +1,12 @@
 # kevin ignored file
 FSC147_384_V2.zip
 FSC147_384_V2
+regressor_model
+checkpoints/bmnet+_ep3_epoch300_no_refiner/model_best.pth
+checkpoints/bmnet+_ep3_epoch300_no_refiner/model_ckpt.pth
+data
+regressor_model
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

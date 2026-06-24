@@ -1,177 +1,194 @@
-import argparse
-import datetime
-import random
-import time
-from pathlib import Path
-import pdb
-import numpy as np
-import torch
-from torch.utils.data import DataLoader
+"""
+Training Code for Learning To Count Everything, CVPR 2021
+Authors: Viresh Ranjan,Udbhav, Thu Nguyen, Minh Hoai
+
+Last modified by: Minh Hoai Nguyen (minhhoai@cs.stonybrook.edu)
+Date: 2021/04/19
+"""
+import torch.nn as nn
+from model import  Resnet50FPN,CountRegressor,weights_normal_init
+from utils import MAPS, Scales, Transform,TransformTrain,extract_features, visualize_output_and_save
+from PIL import Image
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
-from config import cfg
-import util.misc as utils
-from loss import get_loss
-from FSC147_dataset import build_dataset, batch_collate_fn
-from engine import evaluate, train_one_epoch, visualization
-from models import build_model
-
-import matplotlib.pyplot as plt
-plt.switch_backend('agg')
-
-def main(args):
-    print(args)
-    device = torch.device(cfg.TRAIN.device)
-    # fix the seed for reproducibility
-    seed = cfg.TRAIN.seed
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-    model = build_model(cfg)
-    criterion = get_loss(cfg)
-    criterion.to(device)
-    model.to(device)
-
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print('number of params:', n_parameters)
-    param_dicts = [
-        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-        {
-            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
-            "lr": cfg.TRAIN.lr_backbone,
-        },
-    ]
-
-    if cfg.TRAIN.optimizer == "AdamW":
-        optimizer = torch.optim.AdamW(param_dicts, lr=cfg.TRAIN.lr,
-                                      weight_decay=cfg.TRAIN.weight_decay)
-    elif cfg.TRAIN.optimizer == "Adam":
-        optimizer = torch.optim.Adam(param_dicts, lr=cfg.TRAIN.lr)
-    elif cfg.TRAIN.optimizer == "SGD":
-        optimizer = torch.optim.SGD(param_dicts, lr=cfg.TRAIN.lr,
-                                    weight_decay=cfg.TRAIN.weight_decay)
-    else:
-        raise NotImplementedError
-
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, cfg.TRAIN.lr_drop)
-    # define dataset
-    dataset_train = build_dataset(cfg, is_train=True)
-    dataset_val = build_dataset(cfg, is_train=False)
-  # define dataset
-    dataset_train = build_dataset(cfg, is_train=True)
-    dataset_val = build_dataset(cfg, is_train=False)
-
-    data_loader_train = DataLoader(dataset_train, batch_size=cfg.TRAIN.batch_size, collate_fn=batch_collate_fn, shuffle=True, num_workers=cfg.TRAIN.num_workers)
-    data_loader_val = DataLoader(dataset_val, batch_size=1, shuffle=False, collate_fn=batch_collate_fn)
-    output_dir = Path(cfg.DIR.output_dir)
-
-    loss_list = []
-    val_mae_list = []
-
-    if cfg.VAL.evaluate_only:
-        if os.path.isfile(cfg.VAL.resume):
-            checkpoint = torch.load(cfg.VAL.resume, map_location='cpu')
-            model.load_state_dict(checkpoint['model'], strict=False)
-        else:
-            print('model state dict not found.')
-        if cfg.VAL.visualization:
-            mae = visualization(cfg, model, dataset_val, data_loader_val, device, cfg.DIR.output_dir)
-        else:
-            mae = evaluate(model, data_loader_val, device, cfg.DIR.output_dir)
-        return
-
-    if os.path.isfile(cfg.TRAIN.resume):
-        if cfg.TRAIN.resume.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                cfg.TRAIN.resume, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(cfg.TRAIN.resume, map_location='cpu')
-        model.load_state_dict(checkpoint['model'])
-        if not cfg.VAL.evaluate_only and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-            cfg.TRAIN.start_epoch = checkpoint['epoch'] + 1
-            loss_list = checkpoint['loss']
-            val_mae_list = checkpoint['val_mae']
-    best_mae = 10000 if len(val_mae_list) == 0 else min(val_mae_list)
-    best_mae = 10000
-
-    print("Start training")
-    start_time = time.time()
-    for epoch in range(cfg.TRAIN.start_epoch, cfg.TRAIN.epochs):
-        loss = train_one_epoch(
-            model, criterion, data_loader_train, optimizer, device, epoch,
-            cfg.TRAIN.clip_max_norm)
-
-        mae, mse = evaluate(model, data_loader_val, device, cfg.DIR.output_dir)
-        loss_list.append(loss)
-        val_mae_list.append(mae)
-        lr_scheduler.step()
-        if cfg.DIR.output_dir:
-            checkpoint_path = os.path.join(cfg.DIR.output_dir, 'model_ckpt.pth')
-            torch.save({
-                'model': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'lr_scheduler': lr_scheduler.state_dict(),
-                'epoch': epoch,
-                'config': cfg,
-                'loss': loss_list,
-                'val_mae': val_mae_list
-            }, checkpoint_path)
-
-        if mae < best_mae:
-            best_mae = mae
-            best_mse = mse
-            if cfg.DIR.output_dir:
-                checkpoint_path = os.path.join(cfg.DIR.output_dir, 'model_best.pth')
-                torch.save({
-                    'model': model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'lr_scheduler': lr_scheduler.state_dict(),
-                    'epoch': epoch,
-                    'config': cfg,
-                    'loss': loss_list,
-                    'val_mae': val_mae_list
-                }, checkpoint_path)
-
-        utils.plot_learning_curves(loss_list, val_mae_list, cfg.DIR.output_dir)
-
-        if cfg.DIR.output_dir:
-            with (output_dir / "log.txt").open("a") as f:
-                f.write('Epoch %d: loss %.8f, MAE %.2f, MSE %.2f, Best MAE %.2f, Best MSE %.2f \n'%(epoch +1, loss, mae, mse, best_mae, best_mse))
+import torch
+import argparse
+import json
+import numpy as np
+from tqdm import tqdm
+from os.path import exists,join
+import random
+import torch.optim as optim
+import torch.nn.functional as F
 
 
-    total_time = time.time() - start_time
-    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-    print('Training time {}'.format(total_time_str))
+parser = argparse.ArgumentParser(description="Few Shot Counting Evaluation code")
+parser.add_argument("-dp", "--data_path", type=str, default='/home/hoai/DataSets/AgnosticCounting/FSC147_384_V2/', help="Path to the FSC147 dataset")
+parser.add_argument("-o", "--output_dir", type=str,default="./logsSave", help="/Path/to/output/logs/")
+parser.add_argument("-ts", "--test-split", type=str, default='val', choices=["train", "test", "val"], help="what data split to evaluate on on")
+parser.add_argument("-ep", "--epochs", type=int,default=1500, help="number of training epochs")
+parser.add_argument("-g", "--gpu", type=int,default=0, help="GPU id")
+parser.add_argument("-lr", "--learning-rate", type=float,default=1e-5, help="learning rate")
+args = parser.parse_args()
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Class Agnostic Object Counting in PyTorch"
-    )
-    parser.add_argument(
-        "--cfg",
-        default="config/train.yaml",
-        metavar="FILE",
-        help="path to config file",
-        type=str,
-    )
 
-    args = parser.parse_args()
+data_path = args.data_path
+anno_file = data_path + 'annotation_FSC147_384.json'
+data_split_file = data_path + 'Train_Test_Val_FSC_147.json'
+im_dir = data_path + 'images_384_VarV2'
+gt_dir = data_path + 'gt_density_map_adaptive_384_VarV2'
 
-    cfg.merge_from_file(args.cfg)
-    #cfg.merge_from_list(args.opts)
+if not exists(args.output_dir):
+    os.mkdir(args.output_dir)
 
-    cfg.DIR.output_dir = os.path.join(cfg.DIR.snapshot, cfg.DIR.exp)
-    if not os.path.exists(cfg.DIR.output_dir):
-        os.mkdir(cfg.DIR.output_dir)
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
 
-    cfg.TRAIN.resume = os.path.join(cfg.DIR.output_dir, cfg.TRAIN.resume)
-    cfg.VAL.resume = os.path.join(cfg.DIR.output_dir, cfg.VAL.resume)
+criterion = nn.MSELoss().cuda()
 
-    with open(os.path.join(cfg.DIR.output_dir, 'config.yaml'), 'w') as f:
-        f.write("{}".format(cfg))
+resnet50_conv = Resnet50FPN()
+resnet50_conv.cuda()
+resnet50_conv.eval()
 
-    main(cfg)
+regressor = CountRegressor(6, pool='mean')
+weights_normal_init(regressor, dev=0.001)
+regressor.train()
+regressor.cuda()
+optimizer = optim.Adam(regressor.parameters(), lr = args.learning_rate)
+
+with open(anno_file) as f:
+    annotations = json.load(f)
+
+with open(data_split_file) as f:
+    data_split = json.load(f)
+
+def train():
+    print("Training on FSC147 train set data")
+    im_ids = data_split['train']
+    random.shuffle(im_ids)
+    train_mae = 0
+    train_rmse = 0
+    train_loss = 0
+    pbar = tqdm(im_ids)
+    cnt = 0
+    for im_id in pbar:
+        cnt += 1
+        anno = annotations[im_id]
+        bboxes = anno['box_examples_coordinates']
+        dots = np.array(anno['points'])
+
+        rects = list()
+        for bbox in bboxes:
+            x1 = bbox[0][0]
+            y1 = bbox[0][1]
+            x2 = bbox[2][0]
+            y2 = bbox[2][1]
+            rects.append([y1, x1, y2, x2])
+
+        image = Image.open('{}/{}'.format(im_dir, im_id))
+        image.load()
+        density_path = gt_dir + '/' + im_id.split(".jpg")[0] + ".npy"
+        density = np.load(density_path).astype('float32')    
+        sample = {'image':image,'lines_boxes':rects,'gt_density':density}
+        sample = TransformTrain(sample)
+        image, boxes,gt_density = sample['image'].cuda(), sample['boxes'].cuda(),sample['gt_density'].cuda()
+
+        with torch.no_grad():
+            features = extract_features(resnet50_conv, image.unsqueeze(0), boxes.unsqueeze(0), MAPS, Scales)
+        features.requires_grad = True
+        optimizer.zero_grad()
+        output = regressor(features)
+
+        #if image size isn't divisible by 8, gt size is slightly different from output size
+        if output.shape[2] != gt_density.shape[2] or output.shape[3] != gt_density.shape[3]:
+            orig_count = gt_density.sum().detach().item()
+            gt_density = F.interpolate(gt_density, size=(output.shape[2],output.shape[3]),mode='bilinear')
+            new_count = gt_density.sum().detach().item()
+            if new_count > 0: gt_density = gt_density * (orig_count / new_count)
+        loss = criterion(output, gt_density)
+        loss.backward()
+        optimizer.step()
+        train_loss += loss.item()
+        pred_cnt = torch.sum(output).item()
+        gt_cnt = torch.sum(gt_density).item()
+        cnt_err = abs(pred_cnt - gt_cnt)
+        train_mae += cnt_err
+        train_rmse += cnt_err ** 2
+        pbar.set_description('actual-predicted: {:6.1f}, {:6.1f}, error: {:6.1f}. Current MAE: {:5.2f}, RMSE: {:5.2f} Best VAL MAE: {:5.2f}, RMSE: {:5.2f}'.format( gt_cnt, pred_cnt, abs(pred_cnt - gt_cnt), train_mae/cnt, (train_rmse/cnt)**0.5,best_mae,best_rmse))
+        print("")
+    train_loss = train_loss / len(im_ids)
+    train_mae = (train_mae / len(im_ids))
+    train_rmse = (train_rmse / len(im_ids))**0.5
+    return train_loss,train_mae,train_rmse
+
+
+
+   
+def eval():
+    cnt = 0
+    SAE = 0 # sum of absolute errors
+    SSE = 0 # sum of square errors
+
+    print("Evaluation on {} data".format(args.test_split))
+    im_ids = data_split[args.test_split]
+    pbar = tqdm(im_ids)
+    for im_id in pbar:
+        anno = annotations[im_id]
+        bboxes = anno['box_examples_coordinates']
+        dots = np.array(anno['points'])
+
+        rects = list()
+        for bbox in bboxes:
+            x1 = bbox[0][0]
+            y1 = bbox[0][1]
+            x2 = bbox[2][0]
+            y2 = bbox[2][1]
+            rects.append([y1, x1, y2, x2])
+
+        image = Image.open('{}/{}'.format(im_dir, im_id))
+        image.load()
+        sample = {'image':image,'lines_boxes':rects}
+        sample = Transform(sample)
+        image, boxes = sample['image'].cuda(), sample['boxes'].cuda()
+
+        with torch.no_grad():
+            output = regressor(extract_features(resnet50_conv, image.unsqueeze(0), boxes.unsqueeze(0), MAPS, Scales))
+
+        gt_cnt = dots.shape[0]
+        pred_cnt = output.sum().item()
+        cnt = cnt + 1
+        err = abs(gt_cnt - pred_cnt)
+        SAE += err
+        SSE += err**2
+
+        pbar.set_description('{:<8}: actual-predicted: {:6d}, {:6.1f}, error: {:6.1f}. Current MAE: {:5.2f}, RMSE: {:5.2f}'.format(im_id, gt_cnt, pred_cnt, abs(pred_cnt - gt_cnt), SAE/cnt, (SSE/cnt)**0.5))
+        print("")
+
+    print('On {} data, MAE: {:6.2f}, RMSE: {:6.2f}'.format(args.test_split, SAE/cnt, (SSE/cnt)**0.5))
+    return SAE/cnt, (SSE/cnt)**0.5
+
+
+best_mae, best_rmse = 1e7, 1e7
+stats = list()
+for epoch in range(0,args.epochs):
+    regressor.train()
+    train_loss,train_mae,train_rmse = train()
+    regressor.eval()
+    val_mae,val_rmse = eval()
+    stats.append((train_loss, train_mae, train_rmse, val_mae, val_rmse))
+    stats_file = join(args.output_dir, "stats" +  ".txt")
+    with open(stats_file, 'w') as f:
+        for s in stats:
+            f.write("%s\n" % ','.join([str(x) for x in s]))    
+    if best_mae >= val_mae:
+        best_mae = val_mae
+        best_rmse = val_rmse
+        model_name = args.output_dir + '/' + "FamNet.pth"
+        torch.save(regressor.state_dict(), model_name)
+
+    print("Epoch {}, Avg. Epoch Loss: {} Train MAE: {} Train RMSE: {} Val MAE: {} Val RMSE: {} Best Val MAE: {} Best Val RMSE: {} ".format(
+              epoch+1,  stats[-1][0], stats[-1][1], stats[-1][2], stats[-1][3], stats[-1][4], best_mae, best_rmse))
+    
+
+
+
+

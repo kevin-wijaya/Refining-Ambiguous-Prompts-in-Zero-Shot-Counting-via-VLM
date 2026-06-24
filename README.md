@@ -1,38 +1,38 @@
-# [CVPR 2023] Zero-Shot Object Counting
+# Refining Ambiguous Prompts for Zero Shot Object Counting via Vision Lanugage Model Approach
+
+This project presents an additional process designed to improve object counting without relying on human annotations. While current diffusion based methods are powerful, they often struggle with **vague class names and fail to create accurate visual representations for counting**. This work addresses these weaknesses by adding a refinement step that uses vision language models to improve the instructions provided to the diffusion process.
+
+> *Keywords: Zero-Shot Counting, Vision Language Models, Prompt Engineering, Diffusion Models*
+
+## 🎯 Baseline Framework (Zero Shot Object Counting)
+
+<img src="./assets/baseline-framework.webp" style="width: 99.6%; min-width: 300px; max-width: 800px;"> <br>
+<img src="./assets/challenges.webp" style="width: 99.6%; min-width: 300px; max-width: 800px;"> <br>
+
+The architecture focuses on *bridging the gap between raw images and precise counting targets*. The system relies on a diffusion based process to generate visual prototypes, which serve as the foundation for counting objects in a zero shot setting.
+
+A major problem in current systems is the problem of **label ambiguity**. Models often fail because they treat generic labels like fresh cut as literal descriptions, or confuse names like kiwi with unrelated concepts. These misinterpretations prevent the model from identifying the correct objects and cause a significant drop in counting performance.
 
 
- 
-<!---
-<div style="display: flex;">
-  <img src="./figures/ZSC.gif" alt="Second Image" style="width: 60%;"> 
-</div>
--->
+## 🧠 Proposed Methodology
 
-Counting without human annotated exemplars.
+<img src="./assets/contribution.webp" style="width: 99.6%; min-width: 300px; max-width: 800px;"> <br>
 
-## Overview
-This repository contains the implementation of the paper [**Zero-Shot Object Counting**](https://arxiv.org/abs/2303.02001). 
-We propose zero-shot object counting (ZSC), a new setting where only the class name is available during test time. Such a counting system does not require human annotators in the loop and can operate automatically. Starting from a class name, we propose a method that can accurately identify the optimal patches which can then be used as counting exemplars. We first construct a class prototype to select the patches that are likely to contain the objects of interest and then we train a model to quantitatively measure how suitable an arbitrary patch is as a counting exemplar. By applying this model to all the candidate patches, we can select the most suitable patches as exemplars for counting.
+To improve the generation of visual prototypes and ensure they accurately match the target environment, the framework incorporates an **automated prompt refinement pipeline**. The process uses **BLIP** to generate *descriptive captions from the input image*, which are then processed by the **Phi 3 model** to construct *more precise and contextual prompts*. By leveraging these refined prompts for the diffusion process, the system ensures that the `generated visual prototypes are correctly aligned with the target objects`. For ambiguity mitigation, the refinement step transforms vague labels into detailed descriptions, allowing the diffusion model to better distinguish between concepts and reduce classification errors.
 
- <img src="./figures/pipeline.png" alt="Pipeline" style="width: 70%;">
+## 🔧 Installation
 
-## Links:
-Please follow this link to download: "regressor_model/regressor.pth", box_rpn_all.npy, and box_rpn_sel_all.npy:
+*Comming soon ~*
 
-https://drive.google.com/drive/folders/1FjkaK2EzcOdiH_N9WkGnh5c3G9xj9PmE?usp=drive_link
+## 🧾 Acknowledgement
 
-## Bib
-Please cite our CVPR 2022 paper:
-```
-@InProceedings{Xu_2023_CVPR,
-    author    = {Xu, Jingyi and Le, Hieu and Nguyen, Vu and Ranjan, Viresh and Samaras, Dimitris},
-    title     = {Zero-Shot Object Counting},
-    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month     = {June},
-    year      = {2023},
-    pages     = {15548-15557}
-}
-```
+This project is built on top of the official `zero-shot-counting` and `Learning To Count Everything` repositories. Sincere thanks to the authors for their open-source implementations and contributions to object counting research.
+> https://github.com/cvlab-stonybrook/zero-shot-counting (Zero-Shot Object Counting) <br>
+> https://github.com/cvlab-stonybrook/LearningToCountEverything (Learning To Count Everything)
 
-## Acknowledgment
-This repo heavily based on [BMNet]([https://link-url-here.org](https://github.com/flyinglynx/Bilinear-Matching-Network)https://github.com/flyinglynx/Bilinear-Matching-Network). Thanks for the great work.
+## 👤 Authors
+
+**Kevin Wijaya**\*¹
+
+¹² Department of Electrical Engineering and Computer Science<br>
+National Yang Ming Chiao Tung University (NYCU)  
